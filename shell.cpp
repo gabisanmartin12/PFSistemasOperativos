@@ -18,6 +18,16 @@ using namespace std;
 #define MAX_INPUT_LENGTH 160
 
 /**
+* Contain the welcome message
+*
+* @var string
+*/
+string welcome  = string("TRABAJO PRACTICO FINAL DE SISTEMAS OPERATIVOS\n")
+				+ string("Objetivo: Desarrollo de un shell\n")
+				+ string("Alumno: San Martín, Gabriel\n")
+				+ string("Profesores:\n")
+				+ string("\tProdolliet, Jorge\n\tMannarino, Gabriela\n");
+/**
  * Contain the prompt
  *
  * @var string
@@ -32,7 +42,6 @@ struct instruction {
 	string command;
 	vector<string> arguments;
 };
-
 
 /**
  * Function to read command from terminal
@@ -80,56 +89,58 @@ int run(char *com, char **args, string *error);
 void showInstruction(instruction com);
 /**
 * Function to add the cwd to the PATH environment variable
-*
-* @return A integer that represents if the path could be added or not
 */
-int addPath();
+void addPath();
 /**
 * Function to remove the cwd to the PATH environment variable
-*
-* @return A integer that represents if the path could be removed or not
 */
-int removePath();
+void removePath();
 /**
 * Function to show the content of the PATH environment varible
 */
 void showPath();
 	
 int main() {
+	// Print welcome message
+	cout << welcome;
+	// Read input
 	string input;
 	input = readCommands();
+	// Check if command is not exit
 	while (input.compare("exit\n") != 0) {
+		// Create vector of instructions to storing instructions separated by pipe
 		vector<instruction> instructions;
+		// Separate the instructions from the input string
 		instructions = separateInstructions(input);
+		// Execute each instruction
 		vector<instruction>::iterator it = instructions.begin();
 		for (it; it != instructions.end(); it++) {
+			// Check if command is minishell
 			if ((*it).command.compare("minishell") == 0) {
+				// It's then check the argument
 				string arg = (*it).arguments.back();
 				if (arg.compare("+") == 0) {
-					int ret = addPath();
-					//showPath();
-					// To do: handle errors
+					addPath();
 				} else {
-					int ret = removePath();
-					// To do: handle errors
+					removePath();
 				}
 			} else {
 				char *com, **args;
+				// Convert instruction to the params needed by exec
 				args = convertInstruction((*it), com);
 				string error;
 				// Execute command
-				run(com, args, &error);
-				if (!error.empty()) {
-					// If there are errors then I show them
+				if (run(com, args, &error) == -1) {
+					// If there are errors, show them
 					cout << error << endl;
-				}
+				};
 			}
 		}
+		// Read input again
 		input = readCommands();
 	}
 	return 0;
 }
-
 
 // Function to read command from terminal
 string readCommands() {
@@ -148,9 +159,10 @@ vector<instruction> separateInstructions(string input) {
 	vector<string> commands;
 	// Find pipes positions
 	while ((pos = input.find("|", pos)) != string::npos) {
-		commands.push_back(input.substr(posAux, pos-posAux));
-		pos++;
-		posAux = pos;
+		string sub = input.substr(posAux, pos-posAux);
+		commands.push_back(sub);
+		pos    += 2;
+		posAux  = pos;
 	}
 	// After last pipe or there isn't pipe
 	commands.push_back(input.substr(posAux, input.length()-posAux));
@@ -171,42 +183,48 @@ instruction getInstruction(string command) {
 	int blankSpacePos = command.find(" ",0);
 	if (blankSpacePos != -1) {
 		// Extract command and the arguments.
-		com.command   = command.substr(0, blankSpacePos);
+		com.command = command.substr(0, blankSpacePos);
 		com.arguments.push_back(com.command);
 		blankSpacePos++;
 		int blankSpacePosAux  = blankSpacePos;
 		while ((blankSpacePos = command.find(" ", blankSpacePos)) != string::npos) {
-			com.arguments.push_back(command.substr(blankSpacePosAux, blankSpacePos-blankSpacePosAux));
+			string sub = command.substr(blankSpacePosAux, blankSpacePos-blankSpacePosAux);
+			if (!sub.empty()) {
+				com.arguments.push_back(sub);
+			}
 			blankSpacePos++;
 			blankSpacePosAux  = blankSpacePos;
 		}
 		// After last pipe or there isn't pipe
-		com.arguments.push_back(command.substr(blankSpacePosAux, command.length()-blankSpacePosAux-1));
+		string sub = command.substr(blankSpacePosAux, command.length()-blankSpacePosAux-1);
+		if (!sub.empty()) {
+			com.arguments.push_back(sub);
+		}
 	} else {
 		// If there isn't blank space is beacause of the command has not arguments
-		com.command = command;
-		com.arguments.push_back(command);
+		com.command = command.substr(0, command.length()-1);
+		com.arguments.push_back(com.command);
 	}
 	return com;
 }
 
 // Function to convert an instruction to the params type needed to pass execvp
 char** convertInstruction(instruction com, char* &command) {
-	command = new char[com.command.length()+ 1];
+	command = new char[com.command.length()];
 	std::copy(com.command.begin(), com.command.end(), command);
 	command[com.command.length()] = '\0';
-	char **args = new char* [com.arguments.size()+2];
+	char **args = new char* [com.arguments.size()+1];
 	args[0] = new char[strlen(command)];
 	args[0] = command;
 	vector<string>::iterator it = com.arguments.begin()+1;
 	for (int i=1; i<com.arguments.size(); i++) {
-		args[i] = new char[(*it).length()+1];
+		args[i] = new char[(*it).length()];
 		std::copy((*it).begin(), (*it).end(), args[i]);
 		args[i][(*it).length()] = '\0';
 		it++;
 	}
 	args[com.arguments.size()] = new char[1];
-	args[com.arguments.size()] = '\0';
+	args[com.arguments.size()] = (char *)0;
 	return args;
 }
 
@@ -221,9 +239,11 @@ int run(char *com, char **args, string *error) {
 	}
 	// If pid is 0 then it is the child process
 	if (pid == 0) {
-		execvp(com, args);
-		*error += "Fail to execute the command.\n";
-		exit(-1);
+		if ((ret = execvp(args[0],args)) == -1) {
+			*error += "Error: Fail to execute the command.\n";
+			exit(-1);
+		}
+		exit(1);
 	} else {
 		sleep(1);
 	}
@@ -243,35 +263,23 @@ void showInstruction(instruction com) {
 }
 
 // Function to add the cwd to the PATH environment variable
-int addPath(){
-	int ret;
-	// Get $PATH variable
-	char* path = getenv("PATH");
-	// Get current work directory
-	char* cwd;
-	char buffer[1024];
-	cwd = getcwd(buffer, 1024);
-	// Check if the minishell path is not already in $PATH variable
-	if (strstr(path, cwd) != NULL) {
-		// If already exists, I do nothing
-		ret = 0;
-	} else {
-		ret = system("sh addPath.sh");
+void addPath(){
+	int	ret = system("sh addPath.sh");
+	if (ret == -1) {
+		cout << "Failed to add path to path environment variable." << endl;
 	}
-	return ret;
 }
 
 // Function to remove the cwd to the PATH environment variable
-int removePath() {
-	int ret;
-	ret = system("sh removePath.sh");
-	return ret;
+void removePath() {
+	int ret = system("sh removePath.sh");
+	if (ret == -1) {
+		cout << "Failed to add path to path environment variable." << endl;
+	}
 }
+
 // Function to show the content of the PATH environment varible
 void showPath() {
 	char* path = getenv("PATH");
 	printf("%s\n", path);
 }
-
-
-
