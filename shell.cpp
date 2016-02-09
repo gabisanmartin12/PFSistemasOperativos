@@ -2,7 +2,7 @@
  *   shell.cpp
  *   Purpose: Simulate a linux terminal
  *
- *   @author Gabriel San Martín
+ *   @author Gabriel San MartÃ­n
  *   @version 1.0 05/02/2016
  */
 #include <sys/types.h>
@@ -24,7 +24,7 @@ using namespace std;
 */
 string welcome  = string("TRABAJO PRACTICO FINAL DE SISTEMAS OPERATIVOS\n")
 				+ string("Objetivo: Desarrollo de un shell\n")
-				+ string("Alumno: San Martín, Gabriel\n")
+				+ string("Alumno: San MartÃ­n, Gabriel\n")
 				+ string("Profesores:\n")
 				+ string("\tProdolliet, Jorge\n\tMannarino, Gabriela\n");
 /**
@@ -133,7 +133,7 @@ int main() {
 				if (run(com, args, &error) == -1) {
 					// If there are errors, show them
 					cout << error << endl;
-				};
+				}
 			}
 		}
 		// Read input again
